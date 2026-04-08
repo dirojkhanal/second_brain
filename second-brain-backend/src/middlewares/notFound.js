@@ -1,4 +1,4 @@
-import { AppError } from "../utils/appError";
+import { AppError } from "../utils/appError.js";
 
 export const notFound = (req, res, next) => {
     next(new AppError('Not Found', 404));

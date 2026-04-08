@@ -3,6 +3,8 @@ import 'express-async-errors';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { errorHandler } from './middlewares/errorHandler.js';
+import { notFound } from './middlewares/notFound.js';
 
 const app = express();
 
@@ -19,7 +21,8 @@ app.get('/health', (req, res) => {
 });
 
 // Error handling middleware
-
+app.use(errorHandler);
+app.use(notFound);
 
 
 
