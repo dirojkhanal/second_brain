@@ -10,7 +10,7 @@ export const pool = new Pool({
     },
     max:20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 20000,
+    connectionTimeoutMillis: 200000,
 
 });
 export const connectDB = async () => {
