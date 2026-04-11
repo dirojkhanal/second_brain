@@ -47,7 +47,7 @@ export const updateUserPassword = async (userId, hashedPassword) => {
   );
 };
 
-//OTPs 
+// OTPs 
 export const invalidatePreviousOTPs = async (userId, type) => {
   await query(
     `UPDATE otps SET is_used = TRUE
@@ -91,21 +91,21 @@ export const saveRefreshToken = async ({ userId, token, expiresAt }) => {
   );
 };
 
-export const findValidRefreshToken = async (token) => {
+export const findActiveTokensByUserId = async (userId) => {
   const { rows } = await query(
     `SELECT * FROM refresh_tokens
-     WHERE token = $1
+     WHERE user_id = $1
        AND is_revoked = FALSE
        AND expires_at > CURRENT_TIMESTAMP`,
-    [token]
+    [userId]
   );
-  return rows[0] || null;
-};
+  return rows;
+}; 
 
-export const revokeRefreshToken = async (token) => {
+export const revokeRefreshTokenById = async (id) => {
   await query(
-    `UPDATE refresh_tokens SET is_revoked = TRUE WHERE token = $1`,
-    [token]
+    `UPDATE refresh_tokens SET is_revoked = TRUE WHERE id = $1`,
+    [id]
   );
 };
 
