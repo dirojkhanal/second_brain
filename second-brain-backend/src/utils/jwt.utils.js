@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
-import AppError from '../utils/appError.js';
+import {AppError} from '../utils/appError.js';
 
 // SIGN ACCESS TOKEN
 export const signAccessToken = (payload) => {

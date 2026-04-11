@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import AppError from '../utils/appError.js';
+import {AppError} from '../utils/appError.js';
 
 const emailSchema = z
   .string()

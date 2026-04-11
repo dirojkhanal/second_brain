@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFound } from './middlewares/notFound.js';
-
+import routes from "./routes/index.js";
 const app = express();
 
 
@@ -19,6 +19,8 @@ app.use(express.urlencoded({ extended: true}));
 app.get('/health', (req, res) => {
     res.send('Welcome to the Second Brain API');
 });
+
+app.use('/api/v1', routes);
 
 // Error handling middleware
 app.use(errorHandler);

@@ -1,13 +1,14 @@
 import { query } from '../db/index.js';
 
 // Users 
-export const createUser = async ({ name, email, hashedPassword }) => {
+export const createUser = async ({ name, email, password, role }) => {
   const { rows } = await query(
-    `INSERT INTO users (name, email, password)
-     VALUES ($1, $2, $3)
+    `INSERT INTO users (name, email, password, role)
+     VALUES ($1, $2, $3, $4)
      RETURNING id, name, email, role, is_verified, created_at`,
-    [name, email, hashedPassword]
+    [name, email, password, role]
   );
+
   return rows[0];
 };
 
