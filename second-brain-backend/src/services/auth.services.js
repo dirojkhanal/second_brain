@@ -38,6 +38,29 @@ export const userRegister = async ({ name, email, password }) => {
   return { user: safeUser, ...tokens };
 };
 
+//LOGIN 
+export const userLogin = async ({ email, password }) => {
+  const user = await authRepo.findUserByEmail(email);
+
+  const isValidPassword = user
+    ? await bcrypt.compare(password, user.password)
+    : false;
+
+  if (!user || !isValidPassword) {
+    throw new AppError('Invalid email or password', 401);
+  }
+
+  const tokens = await generateTokens(user);
+
+  const { password: _, ...safeUser } = user;
+
+  return {
+    user: safeUser,
+    ...tokens,
+  };
+};
+
+
 //Private Helpers 
 const generateTokens = async (user) => {
   const payload = {
