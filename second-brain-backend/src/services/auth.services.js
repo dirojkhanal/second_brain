@@ -60,6 +60,29 @@ export const userLogin = async ({ email, password }) => {
   };
 };
 
+// LOGOUT 
+export const userLogout = async (refreshToken) => {
+  if (!refreshToken) return;
+
+  let decoded;
+  try {
+    decoded = verifyRefreshToken(refreshToken);
+  } catch (err) {
+    // token invalid or expired -> just ignore (already unusable)
+    return;
+  }
+  // get all active tokens for this user
+  const storedTokens = await authRepo.findActiveTokensByUserId(decoded.id);
+
+  for (const stored of storedTokens) {
+    const isMatch = await bcrypt.compare(refreshToken, stored.token);
+
+    if (isMatch) {
+      await authRepo.revokeRefreshTokenById(stored.id);
+      break;
+    }
+  }
+};
 
 //Private Helpers 
 const generateTokens = async (user) => {

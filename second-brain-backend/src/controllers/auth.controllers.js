@@ -35,5 +35,27 @@ export const login = async (req, res) => {
         status: 'success',
         message: 'User logged in successfully',
         data: { user },
+        refreshToken
     });
+};
+export const logout = async (req, res, next) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+
+    await authService.userLogout(refreshToken);
+
+    // clear cookie
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "User logged out successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
 };
