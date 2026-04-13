@@ -7,6 +7,8 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt.utils.js";
 import * as authRepo from "../repositories/auth.repository.js";
+import { generateOTP, hashOTP, compareOTP } from "../utils/otp.utils.js";
+import { sendOTPEmail } from "../utils/email.utils.js";
 
 const SALT_ROUNDS = 10;
 
@@ -135,6 +137,102 @@ export const refreshAccessToken = async (refreshToken) => {
 
     return { user: safeUser, ...tokens };
 };
+
+//forgot-password
+const OTP_COOLDOWN_SECONDS = 5;      // must wait 60s before requesting again
+const OTP_MAX_PER_HOUR = 20;           // max 5 OTPs per hour
+export const forgotPassword = async ({ email }) => {
+    const user = await authRepo.findUserByEmail(email);
+
+    // don't reveal if email exists
+    if (!user) return;
+
+    // check 1: cooldown — how long since last OTP?
+    const lastOTP = await authRepo.getLastOTP({
+        userId: user.id,
+        type: 'forgot_password',
+    });
+
+    if (lastOTP) {
+    const secondsSinceLast = parseFloat(lastOTP.seconds_ago);
+
+    if (secondsSinceLast < OTP_COOLDOWN_SECONDS) {
+        const waitSeconds = Math.ceil(OTP_COOLDOWN_SECONDS - secondsSinceLast);
+        throw new AppError(
+            `Please wait ${waitSeconds} seconds before requesting another OTP.`,
+            429
+        );
+    }
+}
+    // check 2: max attempts per hour
+    const recentCount = await authRepo.getRecentOTPCount({
+        userId: user.id,
+        type: 'forgot_password',
+        withinMinutes: 60,
+    });
+
+    if (recentCount >= OTP_MAX_PER_HOUR) {
+        throw new AppError(
+            'Too many OTP requests. Please try again after 1 hour.',
+            429
+        );
+    }
+
+    // all checks passed — generate and send OTP
+    const otp = generateOTP();
+    const hashedOtp = await hashOTP(otp);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    await authRepo.saveOTP({
+        userId: user.id,
+        otpCode: hashedOtp,
+        type: 'forgot_password',
+        expiresAt,
+    });
+
+    await sendOTPEmail({
+        toEmail: user.email,
+        name: user.name,
+        otp,
+        type: 'forgot_password',
+    });
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 //Private Helpers 

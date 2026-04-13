@@ -75,3 +75,12 @@ export const refresh = async (req, res) => {
         data: { user },
     });
 };
+export const forgotPassword = async (req, res) => {
+    await authService.forgotPassword(req.body);
+
+    // always return success — don't reveal if email exists
+    res.status(200).json({
+        status: 'success',
+        message: 'If this email exists, an OTP has been sent.',
+    });
+};

@@ -115,3 +115,29 @@ export const revokeAllUserRefreshTokens = async (userId) => {
     [userId]
   );
 };
+// src/repositories/auth.repository.js — add this
+
+export const getRecentOTPCount = async ({ userId, type, withinMinutes }) => {
+    const { rows } = await query(
+        `SELECT COUNT(*) as count FROM otps
+         WHERE user_id = $1
+           AND type = $2
+           AND created_at > NOW() - ($3 * INTERVAL '1 minute')`,
+        [userId, type, withinMinutes]
+    );
+    return parseInt(rows[0].count);
+};
+export const getLastOTP = async ({ userId, type }) => {
+    const { rows } = await query(
+        `SELECT *, 
+                EXTRACT(EPOCH FROM (NOW() - created_at)) AS seconds_ago
+         FROM otps
+         WHERE user_id = $1
+           AND type = $2
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [userId, type]
+    );
+    return rows[0] || null;
+};
+

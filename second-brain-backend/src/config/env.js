@@ -11,6 +11,8 @@ const required = [
     'JWT_REFRESH_SECRET',
     'JWT_ACCESS_EXPIRES_IN',
     'JWT_REFRESH_EXPIRES_IN',
+    'RESEND_API_KEY',
+    'RESEND_FROM_EMAIL',
 ];
 
 // FAIL FAST
@@ -33,6 +35,11 @@ export const config = {
         refreshSecret: process.env.JWT_REFRESH_SECRET,
         accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
         refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
+    },
+
+    email: {
+        resendApiKey: process.env.RESEND_API_KEY,
+        fromEmail: process.env.RESEND_FROM_EMAIL,
     },
 
     clientUrl: process.env.CLIENT_URL || null,
