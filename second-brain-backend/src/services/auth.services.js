@@ -84,6 +84,59 @@ export const userLogout = async (refreshToken) => {
   }
 };
 
+//REFRESH TOKEN
+export const refreshAccessToken = async (refreshToken) => {
+    if (!refreshToken) {
+        throw new AppError('Refresh token missing', 401);
+    }
+
+    // Step 1: verify the JWT signature and expiry
+    const decoded = verifyRefreshToken(refreshToken); 
+
+    // Step 2: fetch all active tokens for this user from DB
+    const storedTokens = await authRepo.findActiveTokensByUserId(decoded.id);
+
+    if (!storedTokens.length) {
+        throw new AppError('Session expired, please login again', 401);
+    }
+
+    // Step 3: find which stored hash matches this token
+    let matchedToken = null;
+    for (const stored of storedTokens) {
+        const isMatch = await bcrypt.compare(refreshToken, stored.token);
+        if (isMatch) {
+            matchedToken = stored;
+            break;
+        }
+    }
+
+    if (!matchedToken) {
+        throw new AppError('Invalid refresh token', 401);
+    }
+
+    // Step 4: revoke the old token (rotate — don't reuse)
+    await authRepo.revokeRefreshTokenById(matchedToken.id);
+
+    // Step 5: fetch fresh user data
+    const user = await authRepo.findUserById(decoded.id);
+    if (!user) {
+        throw new AppError('User not found', 401);
+    }
+
+    // Step 6: generate new tokens
+    const tokens = await generateTokens(user);
+
+    const safeUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+    };
+
+    return { user: safeUser, ...tokens };
+};
+
+
 //Private Helpers 
 const generateTokens = async (user) => {
   const payload = {

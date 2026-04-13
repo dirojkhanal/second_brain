@@ -59,3 +59,19 @@ export const logout = async (req, res, next) => {
     next(error);
   }
 };
+
+//refresh tokens 
+export const refresh = async (req, res) => {
+    const refreshToken = req.cookies.refreshToken; 
+    
+    const { user, accessToken, refreshToken: newRefreshToken } = 
+        await authService.refreshAccessToken(refreshToken);
+    
+    res.cookie('accessToken', accessToken, ACCESS_COOKIE_OPTIONS);
+    res.cookie('refreshToken', newRefreshToken, REFRESH_COOKIE_OPTIONS);
+    
+    res.status(200).json({
+        status: 'success',
+        data: { user },
+    });
+};
