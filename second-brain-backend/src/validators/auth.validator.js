@@ -30,10 +30,10 @@ const loginSchema = z.object({
 const forgotPasswordSchema = z.object({
   email: emailSchema,
 });
-
 const verifyOTPSchema = z.object({
   email: emailSchema,
   otp: otpSchema,
+  type: z.enum(['signup', 'forgot_password']),
 });
 
 const resetPasswordSchema = z

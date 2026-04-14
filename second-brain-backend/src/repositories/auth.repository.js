@@ -64,19 +64,19 @@ export const saveOTP = async ({ userId, otpCode, type, expiresAt }) => {
     [userId, otpCode, type, expiresAt]
   );
 };
-
-export const findValidOTP = async ({ userId, otpCode, type }) => {
+export const findValidOTP = async ({ userId, type }) => {
   const { rows } = await query(
     `SELECT * FROM otps
      WHERE user_id = $1
-       AND otp_code = $2
-       AND type = $3
+       AND type = $2
        AND is_used = FALSE
-       AND expires_at > CURRENT_TIMESTAMP`,
-    [userId, otpCode, type]
+       AND expires_at > CURRENT_TIMESTAMP
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId, type]
   );
   return rows[0] || null;
-};
+}
 
 export const markOTPUsed = async (otpId) => {
   await query(`UPDATE otps SET is_used = TRUE WHERE id = $1`, [otpId]);
