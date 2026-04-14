@@ -198,14 +198,57 @@ export const forgotPassword = async ({ email }) => {
     });
 };
 
+//verify-otp
 
+/**
+ * VERIFY OTP SERVICE (FIXED VERSION)
+ */
+export const verifyOTP = async ({ email, otp, type }) => {
+  // 1. Find user
+  const user = await authRepo.findUserByEmail(email);
 
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
 
+  // 2. Get latest valid OTP (ONLY FILTERS, NO OTP CHECK HERE)
+  const otpRecord = await authRepo.findValidOTP({
+    userId: user.id,
+    type: type,
+  });
 
+  if (!otpRecord) {
+    throw new AppError("OTP not found or expired", 404);
+  }
 
+  // 3. Check expiry manually (extra safety)
+  if (new Date(otpRecord.expires_at) < new Date()) {
+    throw new AppError("OTP expired", 400);
+  }
 
+  // 4. Check already used
+  if (otpRecord.is_used) {
+    throw new AppError("OTP already used", 400);
+  }
 
+  // 5. Compare OTP (IMPORTANT PART)
+  const isMatch = await bcrypt.compare(
+    otp.trim(),
+    otpRecord.otp_code
+  );
 
+  if (!isMatch) {
+    throw new AppError("Invalid OTP", 400);
+  }
+
+  // 6. Mark OTP as used
+  await authRepo.markOTPUsed(otpRecord.id);
+
+  return {
+    message: "OTP verified successfully",
+    userId: user.id,
+  };
+};
 
 
 

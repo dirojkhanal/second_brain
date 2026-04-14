@@ -77,6 +77,27 @@
           }
         },
         {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\",\n  \"type\": \"forgot_password\"\n}"
+            }
+          }
+        },
+        {
           "name": "Refresh Token",
           "request": {
             "method": "POST",
@@ -90,7 +111,7 @@
               "mode": "raw",
               "raw": ""
             },
-            "description": "Cookies are sent automatically by Postman after login."
+            "description": "Cookies are sent automatically after login."
           }
         },
         {
@@ -107,7 +128,7 @@
               "mode": "raw",
               "raw": ""
             },
-            "description": "Cookies are sent automatically by Postman after login."
+            "description": "Cookies are sent automatically after login."
           }
         }
       ]

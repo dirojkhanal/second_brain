@@ -84,3 +84,13 @@ export const forgotPassword = async (req, res) => {
         message: 'If this email exists, an OTP has been sent.',
     });
 };
+
+export const verifyOTP = async (req, res) => {
+    const result = await authService.verifyOTP(req.body);
+
+    res.status(200).json({
+        status: 'success',
+        message: result?.message || 'OTP verified successfully',
+        data: result || null
+    });
+};
