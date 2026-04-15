@@ -47,11 +47,6 @@ const resetPasswordSchema = z
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   });
-
-const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token required'),
-});
-
 // VALIDATION MIDDLEWARE
 const validate = (schema) => (req, res, next) => {
   try {
@@ -68,4 +63,3 @@ export const validateLogin          = validate(loginSchema);
 export const validateForgotPassword = validate(forgotPasswordSchema);
 export const validateVerifyOTP      = validate(verifyOTPSchema);
 export const validateResetPassword  = validate(resetPasswordSchema);
-export const validateRefreshToken   = validate(refreshTokenSchema);
