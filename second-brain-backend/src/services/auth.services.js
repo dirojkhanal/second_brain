@@ -199,12 +199,8 @@ export const forgotPassword = async ({ email }) => {
 };
 
 //verify-otp
-
-/**
- * VERIFY OTP SERVICE (FIXED VERSION)
- */
 export const verifyOTP = async ({ email, otp, type }) => {
-  // 1. Find user
+  // Find user
   const user = await authRepo.findUserByEmail(email);
 
   if (!user) {
@@ -231,7 +227,7 @@ export const verifyOTP = async ({ email, otp, type }) => {
     throw new AppError("OTP already used", 400);
   }
 
-  // 5. Compare OTP (IMPORTANT PART)
+  // 5. Compare OTP
   const isMatch = await bcrypt.compare(
     otp.trim(),
     otpRecord.otp_code
@@ -250,6 +246,62 @@ export const verifyOTP = async ({ email, otp, type }) => {
   };
 };
 
+export const resetPassword = async ({ email, otp, newPassword }) => {
+  // 1. check user
+  const user = await authRepo.findUserByEmail(email);
+  if (!user) {
+    throw new AppError('Invalid request', 400);
+  }
+
+  // 2. get latest valid OTP (not expired + not used)
+  const otpRecord = await authRepo.getLastOTP({
+    userId: user.id,
+    type: 'forgot_password',
+  });
+
+  if (!otpRecord) {
+    throw new AppError('OTP not found', 404);
+  }
+
+  // 3. check expiry
+  if (new Date(otpRecord.expires_at) < new Date()) {
+    throw new AppError('OTP expired', 400);
+  }
+
+  // 4. check if already used
+  if (otpRecord.is_used) {
+    throw new AppError('OTP already used', 400);
+  }
+
+  // 5. compare OTP
+  const isMatch = await compareOTP(otp.trim(), otpRecord.otp_code);
+
+  if (!isMatch) {
+    throw new AppError('Invalid OTP', 400);
+  }
+
+  // 6. prevent same password reuse
+  const isSame = await bcrypt.compare(newPassword, user.password);
+  if (isSame) {
+    throw new AppError('New password must be different', 400);
+  }
+
+  // 7. mark OTP as used
+  await authRepo.markOTPUsed(otpRecord.id);
+
+  // 8. hash new password
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  // 9. update password
+  await authRepo.updateUserPassword(user.id, hashedPassword);
+
+  // 10. revoke all sessions (force logout everywhere)
+  await authRepo.revokeAllUserRefreshTokens(user.id);
+
+  return {
+    message: 'Password reset successfully',
+  };
+};
 
 
 

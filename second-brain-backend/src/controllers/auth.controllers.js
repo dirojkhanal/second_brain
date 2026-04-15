@@ -94,3 +94,13 @@ export const verifyOTP = async (req, res) => {
         data: result || null
     });
 };
+
+//reset-password 
+export const resetPassword = async (req, res) => {
+    await authService.resetPassword(req.body);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Password reset successfully. Please login.',
+    });
+};
