@@ -66,10 +66,25 @@ export const updateNote = async(req, res) => {
 
     res.status(200).json({
         status: 'success',
+        message : 'Note updated successfully',
         data: {
             note
         }
+    })
+};
 
+//DELETE NOTES 
+export const deleteNote = async (req,res) =>{
+    const {noteId} = req.params;
+    const userId = req.user.id;
 
+    const result = await noteService.deleteNote(noteId, userId);
+
+    res.status(204).json({
+        status: 'success',
+        message : result.message,
+        data :{
+            id : result.id
+        }
     })
 };
