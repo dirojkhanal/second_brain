@@ -1,6 +1,3 @@
--- =========================
--- EXTENSIONS
--- =========================
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- =========================
@@ -49,11 +46,30 @@ CREATE TABLE IF NOT EXISTS otps (
 CREATE INDEX IF NOT EXISTS idx_otps_user_id ON otps(user_id);
 
 -- =========================
+-- FOLDERS TABLE
+-- =========================
+CREATE TABLE IF NOT EXISTS folders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_folders_user_id ON folders(user_id);
+CREATE INDEX IF NOT EXISTS idx_folders_name ON folders(name);
+
+-- Prevent duplicate folder names per user (case-insensitive)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_folders_user_name 
+ON folders(user_id, LOWER(name));
+
+-- =========================
 -- NOTES TABLE
 -- =========================
 CREATE TABLE IF NOT EXISTS notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    folder_id UUID REFERENCES folders(id) ON DELETE SET NULL,
     title VARCHAR(255),
     content TEXT,
     is_archived BOOLEAN DEFAULT FALSE,
@@ -62,6 +78,7 @@ CREATE TABLE IF NOT EXISTS notes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
+CREATE INDEX IF NOT EXISTS idx_notes_folder_id ON notes(folder_id);
 CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at);
 
 -- Full-text search index
