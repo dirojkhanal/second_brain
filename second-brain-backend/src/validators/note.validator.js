@@ -75,9 +75,13 @@ const noteIdParamSchema = z.object({
   noteId: uuidSchema,
 });
 
+const moveFolderSchema = z.object({
+  folderId: z.string().uuid('Invalid folder ID').or(z.null()),
+});
 export const validateNoteId = validateParams(noteIdParamSchema);
 // BODY VALIDATORS
 export const validateCreateNote = validate(createNoteSchema);
 export const validateUpdateNote = validate(updateNoteSchema);
 export const validateBatchDelete = validate(batchDeleteSchema);
 export const validateBatchArchive = validate(batchArchiveSchema);
+export const validateMoveToFolder = validate(moveFolderSchema);
