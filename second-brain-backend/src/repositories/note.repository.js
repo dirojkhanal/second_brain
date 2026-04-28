@@ -211,9 +211,6 @@ export const getRecentNotes = async (userId, days = 7, { limit = 20 }) => {
 
   return rows;
 };
-// ADD TO EXISTING FILE
-
-// MOVE NOTE TO FOLDER
 export const moveNoteToFolder = async (noteId, userId, folderId) => {
   const { rows } = await query(
     `UPDATE notes

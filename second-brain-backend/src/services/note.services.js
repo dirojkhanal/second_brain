@@ -1,6 +1,6 @@
 import * as noteRepo from '../repositories/note.repository.js';
 import { AppError } from '../utils/appError.js';
-
+import * as folderRepo from '../repositories/folder.repository.js';
 // Constants
 const MAX_TITLE_LENGTH = 255;
 const MAX_CONTENT_LENGTH = 100000; // 100k chars (~50k words)
@@ -252,5 +252,54 @@ export const getRecentNotes = async (userId, days = 7) => {
   return {
     notes,
     days: parsedDays,
+  };
+};
+// MOVE NOTE TO FOLDER
+export const moveNoteToFolder = async (noteId, userId, folderId) => {
+  // Check note exists and belongs to user
+  const note = await noteRepo.getNoteById(noteId, userId);
+  if (!note) {
+    throw new AppError('Note not found', 404);
+  }
+  
+  // If folderId is provided, verify folder exists and belongs to user
+  if (folderId) {
+    const folder = await folderRepo.getFolderById(folderId, userId);
+    if (!folder) {
+      throw new AppError('Folder not found', 404);
+    }
+  }
+  
+  // Move note (null folderId removes from folder)
+  const updatedNote = await noteRepo.moveNoteToFolder(noteId, userId, folderId);
+  return updatedNote;
+};
+
+// GET NOTES BY FOLDER
+export const getNotesByFolder = async (folderId, userId, queryParams) => {
+  // Verify folder exists and belongs to user
+  const folder = await folderRepo.getFolderById(folderId, userId);
+  if (!folder) {
+    throw new AppError('Folder not found', 404);
+  }
+  
+  const { page, limit, offset } = validatePagination(queryParams);
+  
+  const [notes, total] = await Promise.all([
+    noteRepo.getNotesByFolder(folderId, userId, { limit, offset }),
+    noteRepo.countNotesByFolder(folderId, userId),
+  ]);
+  
+  return {
+    folder,
+    notes,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page * limit < total,
+      hasPrevPage: page > 1,
+    },
   };
 };
