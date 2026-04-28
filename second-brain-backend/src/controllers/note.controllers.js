@@ -165,3 +165,31 @@ export const getRecentNotes = async (req, res) => {
     },
   });
 };
+
+// MOVE NOTE TO FOLDER
+export const moveNoteToFolder = async (req, res) => {
+  const { noteId } = req.params;
+  const { folderId } = req.body;
+  const userId = req.user.id;
+  
+  const note = await noteService.moveNoteToFolder(noteId, userId, folderId);
+  
+  res.status(200).json({
+    status: 'success',
+    message: folderId ? 'Note moved to folder' : 'Note removed from folder',
+    data: { note },
+  });
+};
+
+// GET NOTES BY FOLDER
+export const getNotesByFolder = async (req, res) => {
+  const { folderId } = req.params;
+  const userId = req.user.id;
+  
+  const result = await noteService.getNotesByFolder(folderId, userId, req.query);
+  
+  res.status(200).json({
+    status: 'success',
+    data: result,
+  });
+};
