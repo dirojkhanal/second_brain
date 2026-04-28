@@ -211,3 +211,39 @@ export const getRecentNotes = async (userId, days = 7, { limit = 20 }) => {
 
   return rows;
 };
+// ADD TO EXISTING FILE
+
+// MOVE NOTE TO FOLDER
+export const moveNoteToFolder = async (noteId, userId, folderId) => {
+  const { rows } = await query(
+    `UPDATE notes
+     SET folder_id = $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2 AND user_id = $3
+     RETURNING *`,
+    [folderId, noteId, userId]
+  );
+  return rows[0] || null;
+};
+
+// GET NOTES BY FOLDER
+export const getNotesByFolder = async (folderId, userId, { limit = 20, offset = 0 }) => {
+  const { rows } = await query(
+    `SELECT * FROM notes
+     WHERE folder_id = $1 AND user_id = $2 AND is_archived = FALSE
+     ORDER BY created_at DESC
+     LIMIT $3 OFFSET $4`,
+    [folderId, userId, limit, offset]
+  );
+  return rows;
+};
+
+// COUNT NOTES IN FOLDER
+export const countNotesByFolder = async (folderId, userId) => {
+  const { rows } = await query(
+    `SELECT COUNT(*) as count
+     FROM notes
+     WHERE folder_id = $1 AND user_id = $2 AND is_archived = FALSE`,
+    [folderId, userId]
+  );
+  return parseInt(rows[0].count);
+};
