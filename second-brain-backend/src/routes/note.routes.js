@@ -7,6 +7,7 @@ import {
   validateBatchDelete,
   validateBatchArchive,
   validateNoteId,
+  validateMoveToFolder,
 } from '../validators/note.validator.js';
 
 const router = Router();
@@ -92,5 +93,11 @@ router.post(
   validateBatchArchive,
   noteController.batchArchiveNotes
 );
-
+// Move note to folder
+router.patch(
+  '/:noteId/move',
+  validateNoteId,
+  validateMoveToFolder,
+  noteController.moveNoteToFolder
+);
 export default router;
