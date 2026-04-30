@@ -1,6 +1,7 @@
 import * as noteRepo from '../repositories/note.repository.js';
 import { AppError } from '../utils/appError.js';
 import * as folderRepo from '../repositories/folder.repository.js';
+import * as tagRepo from '../repositories/tag.repository.js';
 // Constants
 const MAX_TITLE_LENGTH = 255;
 const MAX_CONTENT_LENGTH = 100000; // 100k chars (~50k words)
@@ -302,4 +303,66 @@ export const getNotesByFolder = async (folderId, userId, queryParams) => {
       hasPrevPage: page > 1,
     },
   };
+};
+
+// REPLACE getAllNotes function
+export const getAllNotes = async (userId, queryParams) => {
+  const { page, limit, offset } = validatePagination(queryParams);
+  const includeArchived = queryParams.includeArchived === 'true';
+  
+  const [notes, total] = await Promise.all([
+    noteRepo.getAllNotesByUserWithTags(userId, { limit, offset, includeArchived }),
+    noteRepo.getTotalNotesCount(userId, includeArchived),
+  ]);
+  
+  return {
+    notes,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page * limit < total,
+      hasPrevPage: page > 1,
+    },
+  };
+};
+
+// REPLACE getNote function
+export const getNote = async (noteId, userId) => {
+  const note = await noteRepo.getNoteByIdWithTags(noteId, userId);
+  
+  if (!note) {
+    throw new AppError('Note not found', 404);
+  }
+  
+  return note;
+};
+
+// ADD TO createNote function - add tags parameter
+export const createNote = async ({ userId, title, content, tags = [] }) => {
+  const validatedTitle = validateTitle(title);
+  const validatedContent = validateContent(content);
+  
+  const note = await noteRepo.createNote({
+    userId,
+    title: validatedTitle,
+    content: validatedContent,
+  });
+  
+  // Attach tags if provided
+  if (tags && tags.length > 0) {
+    const tagPromises = tags.map(name => tagRepo.findOrCreateTag(name.trim()));
+    const createdTags = await Promise.all(tagPromises);
+    
+    const attachPromises = createdTags.map(tag => 
+      tagRepo.attachTagToNote(note.id, tag.id)
+    );
+    await Promise.all(attachPromises);
+    
+    // Get note with tags
+    return await noteRepo.getNoteByIdWithTags(note.id, userId);
+  }
+  
+  return note;
 };
