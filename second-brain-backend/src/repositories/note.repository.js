@@ -244,3 +244,51 @@ export const countNotesByFolder = async (folderId, userId) => {
   );
   return parseInt(rows[0].count);
 };
+
+// GET ALL NOTES WITH TAGS
+export const getAllNotesByUserWithTags = async (userId, { limit = 20, offset = 0, includeArchived = false }) => {
+  const archiveCondition = includeArchived ? '' : 'AND n.is_archived = FALSE';
+  
+  const { rows } = await query(
+    `SELECT n.*,
+            COALESCE(
+              json_agg(
+                json_build_object('id', t.id, 'name', t.name)
+                ORDER BY t.name
+              ) FILTER (WHERE t.id IS NOT NULL),
+              '[]'
+            ) as tags
+     FROM notes n
+     LEFT JOIN note_tags nt ON n.id = nt.note_id
+     LEFT JOIN tags t ON nt.tag_id = t.id
+     WHERE n.user_id = $1 ${archiveCondition}
+     GROUP BY n.id
+     ORDER BY n.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [userId, limit, offset]
+  );
+
+  return rows;
+};
+
+// GET SINGLE NOTE WITH TAGS
+export const getNoteByIdWithTags = async (noteId, userId) => {
+  const { rows } = await query(
+    `SELECT n.*,
+            COALESCE(
+              json_agg(
+                json_build_object('id', t.id, 'name', t.name)
+                ORDER BY t.name
+              ) FILTER (WHERE t.id IS NOT NULL),
+              '[]'
+            ) as tags
+     FROM notes n
+     LEFT JOIN note_tags nt ON n.id = nt.note_id
+     LEFT JOIN tags t ON nt.tag_id = t.id
+     WHERE n.id = $1 AND n.user_id = $2
+     GROUP BY n.id`,
+    [noteId, userId]
+  );
+
+  return rows[0] || null;
+};
