@@ -78,6 +78,16 @@ const noteIdParamSchema = z.object({
 const moveFolderSchema = z.object({
   folderId: z.string().uuid('Invalid folder ID').or(z.null()),
 });
+const createNoteWithTagsSchema = z.object({
+  title: titleSchema,
+  content: contentSchema,
+  tags: z.array(
+    z.string().trim().min(1).max(50)
+  ).optional().default([]),
+});
+
+// UPDATE EXISTING EXPORT
+export const validateCreateNote = validate(createNoteWithTagsSchema);
 export const validateNoteId = validateParams(noteIdParamSchema);
 // BODY VALIDATORS
 export const validateCreateNote = validate(createNoteSchema);
