@@ -1,21 +1,94 @@
 {
   "info": {
-    "name": "Second Brain API",
+    "name": "Second Brain API — Complete Collection",
+    "_postman_id": "second-brain-api-v1",
+    "description": "Complete REST API collection for the Second Brain backend.\n\nStack: Node.js, Express, PostgreSQL\nAuth: JWT (httpOnly cookies) + Bearer token + RBAC\nModules: Auth, Notes, Folders, Tags\n\n**Setup:**\n1. Set `baseUrl` in the environment (default: http://localhost:5000/api/v1)\n2. Register or login — accessToken & refreshToken are set as httpOnly cookies automatically\n3. Copy the `accessToken` value from the login response cookie into the `accessToken` environment variable to use Bearer auth on protected routes",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5000/api/v1"
+      "value": "http://localhost:5000/api/v1",
+      "type": "string",
+      "description": "Base URL for all API requests"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token — populated automatically by login/register test scripts"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT refresh token — populated automatically by login/register test scripts"
+    },
+    {
+      "key": "noteId",
+      "value": "",
+      "type": "string",
+      "description": "Captured from Create Note response"
+    },
+    {
+      "key": "folderId",
+      "value": "",
+      "type": "string",
+      "description": "Captured from Create Folder response"
+    },
+    {
+      "key": "tagId",
+      "value": "",
+      "type": "string",
+      "description": "Captured from Create Tag response"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string",
+      "description": "Captured from Register/Login response"
     }
   ],
+
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+
   "item": [
+
     {
-      "name": "Auth",
+      "name": "🔐 Auth",
+      "description": "Authentication endpoints — registration, login, logout, token refresh, and password reset via OTP.",
       "item": [
+
         {
           "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', res.data.user.id);",
+                  "    console.log('Registered user:', res.data.user.email);",
+                  "    // Note: tokens are set as httpOnly cookies automatically",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" }
@@ -27,13 +100,51 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Password123!\"\n}"
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "description": "Creates a new user account. Returns user data and sets httpOnly cookies (accessToken, refreshToken).\n\n**Validation:**\n- name: min 2 chars\n- email: valid email format\n- password: min 6 chars\n\n**Response 201:**\n```json\n{\n  \"status\": \"success\",\n  \"data\": { \"user\": { \"id\": \"uuid\", \"name\": \"...\", \"email\": \"...\", \"role\": \"user\" } }\n}\n```"
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"User created successfully\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"name\": \"John Doe\",\n      \"email\": \"john@example.com\",\n      \"role\": \"user\"\n    }\n  }\n}"
+            },
+            {
+              "name": "400 User Already Exists",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"User already exists\"\n}"
             }
-          }
+          ]
         },
+
         {
           "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', res.data.user.id);",
+                  "    // Extract accessToken from Set-Cookie header if needed",
+                  "    const cookies = pm.cookies.toObject();",
+                  "    if (cookies.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', cookies.accessToken);",
+                  "    }",
+                  "    console.log('Logged in as:', res.data.user.email);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" }
@@ -45,13 +156,100 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Password123!\"\n}"
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "description": "Authenticates a user. Sets httpOnly cookies (accessToken, refreshToken). Returns user data.\n\n**Response 200:**\n```json\n{\n  \"status\": \"success\",\n  \"data\": { \"user\": { ... } }\n}\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"User logged in successfully\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"name\": \"John Doe\",\n      \"email\": \"john@example.com\",\n      \"role\": \"user\",\n      \"is_verified\": false\n    }\n  }\n}"
+            },
+            {
+              "name": "401 Invalid Credentials",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Invalid email or password\"\n}"
             }
-          }
+          ]
         },
+
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "body": { "mode": "raw", "raw": "" },
+            "description": "Revokes the refresh token from the DB and clears the refreshToken cookie. The accessToken cookie must be cleared client-side or will expire naturally (15 min)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"User logged out successfully\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Refresh Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const cookies = pm.cookies.toObject();",
+                  "    if (cookies.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', cookies.accessToken);",
+                  "        console.log('Access token refreshed');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "body": { "mode": "raw", "raw": "" },
+            "description": "Issues new access + refresh token pair using the refreshToken cookie (token rotation). The old refresh token is revoked."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"uuid\",\n      \"name\": \"John Doe\",\n      \"email\": \"john@example.com\",\n      \"role\": \"user\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 Missing/Invalid Refresh Token",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Refresh token missing\"\n}"
+            }
+          ]
+        },
+
         {
           "name": "Forgot Password",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" }
@@ -63,13 +261,30 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\"\n}"
+              "raw": "{\n  \"email\": \"john@example.com\"\n}"
+            },
+            "description": "Sends a 6-digit OTP to the user's email (via Resend). Always returns 200 regardless of whether the email exists (prevents email enumeration).\n\n**Rate limited:** 10 req / 15 min per IP. Cooldown of 60s between OTP requests per user. Max 5 OTPs per hour per user.\n\nOTP expires in 10 minutes."
+          },
+          "response": [
+            {
+              "name": "200 OK (Always)",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"If this email exists, an OTP has been sent.\"\n}"
+            },
+            {
+              "name": "429 Rate Limited",
+              "status": "Too Many Requests",
+              "code": 429,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Please wait 45 seconds before requesting another OTP.\"\n}"
             }
-          }
+          ]
         },
+
         {
           "name": "Verify OTP",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" }
@@ -81,13 +296,36 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\",\n  \"type\": \"forgot_password\"\n}"
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"otp\": \"123456\",\n  \"type\": \"forgot_password\"\n}"
+            },
+            "description": "Verifies a 6-digit OTP. The `type` field must be `forgot_password` or `signup`.\n\nOn success, returns `userId` which can be used to confirm identity before resetting password.\n\n**Rate limited:** 10 req / 15 min per IP."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"OTP verified successfully\",\n  \"data\": {\n    \"message\": \"OTP verified successfully\",\n    \"userId\": \"550e8400-e29b-41d4-a716-446655440000\"\n  }\n}"
+            },
+            {
+              "name": "400 Invalid OTP",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Invalid OTP\"\n}"
+            },
+            {
+              "name": "400 OTP Expired",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"OTP expired\"\n}"
             }
-          }
+          ]
         },
+
         {
           "name": "Reset Password",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" }
@@ -99,45 +337,1113 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword456!\",\n  \"confirmPassword\": \"NewPassword456!\"\n}"
+            },
+            "description": "Resets password using the OTP. Re-verifies the OTP internally. Prevents reuse of the same password. Revokes all active sessions on success (forces re-login everywhere).\n\n**Rate limited:** 10 req / 15 min per IP."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Password reset successfully. Please login.\"\n}"
+            },
+            {
+              "name": "400 Passwords Don't Match",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Passwords do not match\"\n}"
+            },
+            {
+              "name": "400 Same Password Reuse",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"New password must be different\"\n}"
+            }
+          ]
+        }
+
+      ]
+    },
+
+    {
+      "name": "📝 Notes",
+      "description": "Full CRUD for notes, plus search, archive toggle, batch operations, and folder assignment.",
+      "item": [
+
+        {
+          "name": "Create Note",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('noteId', res.data.note.id);",
+                  "    console.log('Note created:', res.data.note.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notes",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My First Note\",\n  \"content\": \"This is the content of my first note. It can contain multiple paragraphs and rich text.\\n\\nSecond paragraph here.\",\n  \"tags\": [\"productivity\", \"ideas\"]\n}"
+            },
+            "description": "Creates a new note for the authenticated user. Optionally accepts a `tags` array — tags are created if they don't exist.\n\n**Validation:**\n- title: required, max 255 chars\n- content: required, max 100,000 chars\n- tags: optional, array of strings (max 20, each max 50 chars)\n\n**Returns:** Note object with tags array."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"note\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440001\",\n      \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"folder_id\": null,\n      \"title\": \"My First Note\",\n      \"content\": \"This is the content...\",\n      \"is_archived\": false,\n      \"created_at\": \"2026-04-30T10:00:00.000Z\",\n      \"updated_at\": \"2026-04-30T10:00:00.000Z\",\n      \"tags\": [\n        { \"id\": \"uuid\", \"name\": \"productivity\" },\n        { \"id\": \"uuid\", \"name\": \"ideas\" }\n      ]\n    }\n  }\n}"
+            },
+            {
+              "name": "400 Validation Error",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Title is required\"\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Authentication required. Please login.\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get All Notes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notes?page=1&limit=20&includeArchived=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes"],
+              "query": [
+                { "key": "page", "value": "1", "description": "Page number (default: 1)" },
+                { "key": "limit", "value": "20", "description": "Results per page (1–100, default: 20)" },
+                { "key": "includeArchived", "value": "false", "description": "Include archived notes (true/false, default: false)" }
+              ]
+            },
+            "description": "Returns paginated notes for the authenticated user, each with tags. Excludes archived notes by default.\n\n**Query params:**\n- `page` (default: 1)\n- `limit` (default: 20, max: 100)\n- `includeArchived` (default: false)"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"notes\": [\n      {\n        \"id\": \"uuid\",\n        \"title\": \"My First Note\",\n        \"content\": \"...\",\n        \"is_archived\": false,\n        \"folder_id\": null,\n        \"created_at\": \"2026-04-30T10:00:00.000Z\",\n        \"tags\": [{ \"id\": \"uuid\", \"name\": \"productivity\" }]\n      }\n    ],\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 42,\n      \"totalPages\": 3,\n      \"hasNextPage\": true,\n      \"hasPrevPage\": false\n    }\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get All Notes (Include Archived)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notes?includeArchived=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes"],
+              "query": [
+                { "key": "includeArchived", "value": "true" }
+              ]
+            },
+            "description": "Fetches all notes including archived ones."
+          }
+        },
+
+        {
+          "name": "Get Single Note",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notes/{{noteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "{{noteId}}"]
+            },
+            "description": "Returns a single note with its full tag list. Returns 404 if not found or doesn't belong to the user."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"note\": {\n      \"id\": \"{{noteId}}\",\n      \"title\": \"My First Note\",\n      \"content\": \"Full content here...\",\n      \"is_archived\": false,\n      \"folder_id\": null,\n      \"created_at\": \"2026-04-30T10:00:00.000Z\",\n      \"updated_at\": \"2026-04-30T10:00:00.000Z\",\n      \"tags\": []\n    }\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Note not found\"\n}"
+            },
+            {
+              "name": "400 Invalid UUID",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Invalid note ID format\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Update Note (Title Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notes/{{noteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "{{noteId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Note Title\"\n}"
+            },
+            "description": "Partially updates a note. At least one of `title` or `content` must be provided."
+          }
+        },
+
+        {
+          "name": "Update Note (Content Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notes/{{noteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "{{noteId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated content with new information and insights.\"\n}"
             }
           }
         },
+
         {
-          "name": "Refresh Token",
+          "name": "Update Note (Both Fields)",
           "request": {
-            "method": "POST",
-            "header": [],
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/auth/refresh",
+              "raw": "{{baseUrl}}/notes/{{noteId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["auth", "refresh"]
+              "path": ["notes", "{{noteId}}"]
             },
             "body": {
               "mode": "raw",
-              "raw": ""
+              "raw": "{\n  \"title\": \"Fully Updated Note\",\n  \"content\": \"Both title and content have been updated simultaneously.\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Note updated successfully\",\n  \"data\": { \"note\": { \"id\": \"uuid\", \"title\": \"Fully Updated Note\", \"...\" : \"...\" } }\n}"
             },
-            "description": "Cookies are sent automatically after login."
+            {
+              "name": "400 Nothing to Update",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"At least one field (title or content) must be provided\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Delete Note",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notes/{{noteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "{{noteId}}"]
+            },
+            "description": "Permanently deletes a note. Associated note_tags records are cascade-deleted."
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "body": ""
+            }
+          ]
+        },
+
+        {
+          "name": "Search Notes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notes/search?query=productivity&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "search"],
+              "query": [
+                { "key": "query", "value": "productivity", "description": "Search term (min 2 chars)" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Full-text search across note titles and content using PostgreSQL `to_tsvector`. Results are ranked by relevance (`ts_rank`).\n\n**Query params:**\n- `query` (required, min 2 chars)\n- `page`, `limit`"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"notes\": [ { \"id\": \"uuid\", \"title\": \"...\", \"rank\": 0.0759615 } ],\n    \"query\": \"productivity\",\n    \"pagination\": { \"page\": 1, \"limit\": 20, \"total\": 3, \"totalPages\": 1, \"hasNextPage\": false, \"hasPrevPage\": false }\n  }\n}"
+            },
+            {
+              "name": "400 Query Too Short",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Search query must be at least 2 characters\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get Recent Notes (7 days default)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notes/recent",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "recent"]
+            },
+            "description": "Returns non-archived notes created within the last N days. Default: 7. Max: 30."
+          }
+        },
+
+        {
+          "name": "Get Recent Notes (Custom Days)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notes/recent?days=14",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "recent"],
+              "query": [
+                { "key": "days", "value": "14", "description": "Number of days to look back (1–30)" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"notes\": [ { \"id\": \"uuid\", \"title\": \"...\", \"created_at\": \"2026-04-25T...\" } ],\n    \"days\": 14\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Toggle Archive Note",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notes/{{noteId}}/archive",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "{{noteId}}", "archive"]
+            },
+            "description": "Toggles the `is_archived` flag on a note. Call again to unarchive. No body required."
+          },
+          "response": [
+            {
+              "name": "200 Archived",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Note archived successfully\",\n  \"data\": { \"note\": { \"id\": \"uuid\", \"is_archived\": true, \"...\" : \"...\" } }\n}"
+            },
+            {
+              "name": "200 Unarchived",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Note unarchived successfully\",\n  \"data\": { \"note\": { \"id\": \"uuid\", \"is_archived\": false, \"...\" : \"...\" } }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Move Note to Folder",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notes/{{noteId}}/move",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "{{noteId}}", "move"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"folderId\": \"{{folderId}}\"\n}"
+            },
+            "description": "Moves a note into a folder. Set `folderId` to `null` to remove from folder (move to uncategorized)."
+          },
+          "response": [
+            {
+              "name": "200 Moved",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Note moved to folder\",\n  \"data\": { \"note\": { \"id\": \"uuid\", \"folder_id\": \"folder-uuid\", \"...\" : \"...\" } }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Remove Note from Folder",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notes/{{noteId}}/move",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "{{noteId}}", "move"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"folderId\": null\n}"
+            },
+            "description": "Removes a note from its current folder by setting folderId to null."
+          }
+        },
+
+        {
+          "name": "Batch Delete Notes",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notes/batch/delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "batch", "delete"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"noteIds\": [\n    \"00000000-0000-0000-0000-000000000001\",\n    \"00000000-0000-0000-0000-000000000002\"\n  ]\n}"
+            },
+            "description": "Permanently deletes up to 100 notes in one request. Only deletes notes owned by the authenticated user.\n\n**Validation:**\n- `noteIds`: array of valid UUIDs (min 1, max 100)"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Notes deleted successfully\",\n  \"data\": {\n    \"deletedCount\": 2,\n    \"deletedIds\": [\"uuid1\", \"uuid2\"]\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Batch Archive Notes",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notes/batch/archive",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "batch", "archive"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"noteIds\": [\n    \"00000000-0000-0000-0000-000000000001\",\n    \"00000000-0000-0000-0000-000000000002\"\n  ],\n  \"archive\": true\n}"
+            },
+            "description": "Archives or unarchives up to 100 notes. Set `archive: false` to unarchive."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Notes archived successfully\",\n  \"data\": {\n    \"affectedCount\": 2,\n    \"affectedIds\": [\"uuid1\", \"uuid2\"]\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Batch Unarchive Notes",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notes/batch/archive",
+              "host": ["{{baseUrl}}"],
+              "path": ["notes", "batch", "archive"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"noteIds\": [\n    \"00000000-0000-0000-0000-000000000001\"\n  ],\n  \"archive\": false\n}"
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "📁 Folders",
+      "description": "Folder management for organizing notes. Folder names are unique per user (case-insensitive). Deleting a folder moves its notes to uncategorized (folder_id = NULL).",
+      "item": [
+
+        {
+          "name": "Create Folder",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('folderId', res.data.folder.id);",
+                  "    console.log('Folder created:', res.data.folder.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folders",
+              "host": ["{{baseUrl}}"],
+              "path": ["folders"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Work Projects\"\n}"
+            },
+            "description": "Creates a new folder. Name is unique per user (case-insensitive — 'Work' and 'work' are the same).\n\n**Validation:**\n- name: required, 1–255 chars"
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Folder created successfully\",\n  \"data\": {\n    \"folder\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n      \"user_id\": \"user-uuid\",\n      \"name\": \"Work Projects\",\n      \"created_at\": \"2026-04-30T10:00:00.000Z\",\n      \"updated_at\": \"2026-04-30T10:00:00.000Z\"\n    }\n  }\n}"
+            },
+            {
+              "name": "409 Duplicate Name",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"A folder with this name already exists\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get All Folders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/folders",
+              "host": ["{{baseUrl}}"],
+              "path": ["folders"]
+            },
+            "description": "Returns all folders for the authenticated user, each with a `note_count` of non-archived notes."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"folders\": [\n      {\n        \"id\": \"uuid\",\n        \"name\": \"Work Projects\",\n        \"note_count\": \"5\",\n        \"created_at\": \"2026-04-30T10:00:00.000Z\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get Single Folder",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/folders/{{folderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["folders", "{{folderId}}"]
+            },
+            "description": "Returns a folder with its stats (note_count of non-archived notes)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"folder\": {\n      \"id\": \"uuid\",\n      \"name\": \"Work Projects\",\n      \"note_count\": \"5\",\n      \"created_at\": \"2026-04-30T10:00:00.000Z\"\n    }\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Update Folder",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folders/{{folderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["folders", "{{folderId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Work Projects — Q2\"\n}"
+            },
+            "description": "Renames a folder. Still validates for uniqueness (excluding the current folder)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Folder updated successfully\",\n  \"data\": { \"folder\": { \"id\": \"uuid\", \"name\": \"Work Projects — Q2\" } }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Delete Folder",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/folders/{{folderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["folders", "{{folderId}}"]
+            },
+            "description": "Deletes a folder. All notes inside the folder have their `folder_id` set to NULL (moved to uncategorized). Notes are NOT deleted."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Folder deleted successfully\",\n  \"data\": { \"id\": \"uuid\" }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get Notes in Folder",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/folders/{{folderId}}/notes?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["folders", "{{folderId}}", "notes"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Returns paginated notes belonging to a specific folder (non-archived only). Also returns the folder object."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"folder\": { \"id\": \"uuid\", \"name\": \"Work Projects\" },\n    \"notes\": [ { \"id\": \"uuid\", \"title\": \"...\", \"folder_id\": \"uuid\" } ],\n    \"pagination\": { \"page\": 1, \"total\": 5, \"totalPages\": 1 }\n  }\n}"
+            }
+          ]
+        }
+
+      ]
+    },
+
+    {
+      "name": "🏷️ Tags",
+      "description": "Tag management with many-to-many note associations. Tags are global (shared across users) but usage is tracked per user. Tags are find-or-created on attach.",
+      "item": [
+
+        {
+          "name": "Create Tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('tagId', res.data.tag.id);",
+                  "    console.log('Tag created:', res.data.tag.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"productivity\"\n}"
+            },
+            "description": "Creates a tag or returns the existing one (find-or-create pattern).\n\n**Validation:**\n- name: 1–50 chars, alphanumeric + spaces + hyphens + underscores only"
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Tag created successfully\",\n  \"data\": {\n    \"tag\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440003\",\n      \"name\": \"productivity\",\n      \"created_at\": \"2026-04-30T10:00:00.000Z\"\n    }\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get All Tags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tags?limit=50&search=prod",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags"],
+              "query": [
+                { "key": "limit", "value": "50", "description": "Max results (default: 50, max: 100)" },
+                { "key": "search", "value": "prod", "description": "Filter by name (partial match)" }
+              ]
+            },
+            "description": "Returns all tags with usage_count, sorted by most-used. Supports optional search filter."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"tags\": [\n      { \"id\": \"uuid\", \"name\": \"productivity\", \"usage_count\": \"12\", \"created_at\": \"...\" },\n      { \"id\": \"uuid\", \"name\": \"ideas\", \"usage_count\": \"8\" }\n    ]\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get My Tags (User's Tags)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tags/my-tags?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "my-tags"],
+              "query": [
+                { "key": "limit", "value": "50" }
+              ]
+            },
+            "description": "Returns only tags that the authenticated user has actually used on their notes, with usage count."
+          }
+        },
+
+        {
+          "name": "Autocomplete Tags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tags/autocomplete?q=pro",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "autocomplete"],
+              "query": [
+                { "key": "q", "value": "pro", "description": "Search prefix (min 1 char, returns top 10 matches)" }
+              ]
+            },
+            "description": "Returns up to 10 matching tags for autocomplete UI. Results sorted by usage_count."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"tags\": [\n      { \"id\": \"uuid\", \"name\": \"productivity\", \"usage_count\": \"12\" },\n      { \"id\": \"uuid\", \"name\": \"programming\", \"usage_count\": \"5\" }\n    ]\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get Tag by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tags/{{tagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "{{tagId}}"]
+            },
+            "description": "Returns a single tag by its UUID, with usage_count."
+          }
+        },
+
+        {
+          "name": "Delete Tag",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tags/{{tagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "{{tagId}}"]
+            },
+            "description": "Deletes a tag only if it is not attached to any notes. Returns 400 if the tag is in use."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Tag deleted successfully\",\n  \"data\": { \"id\": \"uuid\" }\n}"
+            },
+            {
+              "name": "400 Tag In Use",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Cannot delete tag that is in use\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Attach Tags to Note",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tags/notes/{{noteId}}/attach",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "notes", "{{noteId}}", "attach"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tags\": [\"productivity\", \"deep-work\", \"goals\"]\n}"
+            },
+            "description": "Attaches one or more tags to a note by name. Tags are created if they don't exist (find-or-create). Duplicate attachments are silently ignored.\n\n**Returns:** Full updated tags array for the note.\n\n**Validation:**\n- tags: array, min 1, max 20\n- each tag: 1–50 chars, alphanumeric + spaces + hyphens + underscores"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Tags attached to note\",\n  \"data\": {\n    \"tags\": [\n      { \"id\": \"uuid\", \"name\": \"productivity\" },\n      { \"id\": \"uuid\", \"name\": \"deep-work\" },\n      { \"id\": \"uuid\", \"name\": \"goals\" }\n    ]\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Remove Tag from Note",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tags/notes/{{noteId}}/tags/{{tagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "notes", "{{noteId}}", "tags", "{{tagId}}"]
+            },
+            "description": "Removes a specific tag from a note. Does NOT delete the tag itself."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Tag removed from note\"\n}"
+            },
+            {
+              "name": "404 Tag Not Attached",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"status\": \"fail\",\n  \"message\": \"Tag not attached to this note\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Replace Note Tags (Atomic)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tags/notes/{{noteId}}/tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "notes", "{{noteId}}", "tags"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tags\": [\"new-tag-1\", \"new-tag-2\"]\n}"
+            },
+            "description": "Atomically replaces ALL tags on a note. Removes old tags and attaches new ones in a single DB transaction. Use an empty array `[]` to clear all tags.\n\n**Returns:** Updated tags array."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Note tags updated\",\n  \"data\": {\n    \"tags\": [\n      { \"id\": \"uuid\", \"name\": \"new-tag-1\" },\n      { \"id\": \"uuid\", \"name\": \"new-tag-2\" }\n    ]\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Filter Notes by Tags (ANY match)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tags/filter?page=1&limit=20&matchAll=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "filter"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "matchAll", "value": "false", "description": "false = ANY tag match, true = ALL tags must be present" }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tagIds\": [\n    \"00000000-0000-0000-0000-000000000003\",\n    \"00000000-0000-0000-0000-000000000004\"\n  ]\n}"
+            },
+            "description": "Returns notes that have ANY of the specified tags. Set `matchAll=true` to require ALL tags to be present on the note.\n\n**Body:**\n- `tagIds`: array of tag UUIDs (1–20)\n\n**Query:**\n- `matchAll`: `true` = AND logic, `false` = OR logic (default: false)"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"notes\": [ { \"id\": \"uuid\", \"title\": \"...\", \"tags\": [\"productivity\"] } ],\n    \"pagination\": { \"page\": 1, \"total\": 7, \"totalPages\": 1 },\n    \"filters\": { \"tagIds\": [\"uuid1\", \"uuid2\"], \"matchAll\": false }\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Filter Notes by Tags (ALL match)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tags/filter?matchAll=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "filter"],
+              "query": [
+                { "key": "matchAll", "value": "true" }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tagIds\": [\n    \"00000000-0000-0000-0000-000000000003\",\n    \"00000000-0000-0000-0000-000000000004\"\n  ]\n}"
+            },
+            "description": "Returns notes that have ALL of the specified tags (AND logic)."
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "✅ Validation Tests",
+      "description": "Pre-built requests to test validation error responses. All should return 4xx.",
+      "item": [
+
+        {
+          "name": "Note — Empty Title (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/notes", "host": ["{{baseUrl}}"], "path": ["notes"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"\",\n  \"content\": \"Valid content here\"\n}" }
           }
         },
         {
-          "name": "Logout",
+          "name": "Note — Title Too Long (400)",
           "request": {
             "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/auth/logout",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "logout"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": ""
-            },
-            "description": "Cookies are sent automatically after login."
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/notes", "host": ["{{baseUrl}}"], "path": ["notes"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"content\": \"Content\"\n}" }
           }
+        },
+        {
+          "name": "Note — Missing Content (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/notes", "host": ["{{baseUrl}}"], "path": ["notes"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Valid Title\"\n}" }
+          }
+        },
+        {
+          "name": "Note — Invalid UUID (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/notes/not-a-valid-uuid", "host": ["{{baseUrl}}"], "path": ["notes", "not-a-valid-uuid"] }
+          }
+        },
+        {
+          "name": "Note — Update With No Fields (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/notes/{{noteId}}", "host": ["{{baseUrl}}"], "path": ["notes", "{{noteId}}"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Note — Non-existent UUID (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/notes/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["notes", "00000000-0000-0000-0000-000000000000"] }
+          }
+        },
+        {
+          "name": "Search — Query Too Short (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/notes/search?query=a", "host": ["{{baseUrl}}"], "path": ["notes", "search"], "query": [{ "key": "query", "value": "a" }] }
+          }
+        },
+        {
+          "name": "Auth — Register with Weak Password (400)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Test\",\n  \"email\": \"test@example.com\",\n  \"password\": \"123\"\n}" }
+          }
+        },
+        {
+          "name": "Auth — Register with Invalid Email (400)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Test\",\n  \"email\": \"not-an-email\",\n  \"password\": \"Password123!\"\n}" }
+          }
+        },
+        {
+          "name": "Auth — Login with Wrong Password (401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"WrongPassword!\"\n}" }
+          }
+        },
+        {
+          "name": "Tag — Invalid Name Characters (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/tags", "host": ["{{baseUrl}}"], "path": ["tags"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"tag@with#special!\"\n}" }
+          }
+        },
+        {
+          "name": "Batch Delete — Too Many IDs (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/notes/batch/delete", "host": ["{{baseUrl}}"], "path": ["notes", "batch", "delete"] },
+            "body": { "mode": "raw", "raw": "{\n  \"noteIds\": []\n}" }
+          }
+        },
+        {
+          "name": "Protected Route — No Auth (401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/notes", "host": ["{{baseUrl}}"], "path": ["notes"] },
+            "description": "Calls a protected route without any authentication cookie or token."
+          }
+        },
+        {
+          "name": "Health Check (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health" },
+            "description": "Public health check endpoint. Should return 200 with a welcome message."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "Welcome to the Second Brain API"
+            }
+          ]
         }
       ]
     }
+
   ]
 }
