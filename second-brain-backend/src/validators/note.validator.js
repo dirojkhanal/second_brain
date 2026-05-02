@@ -90,7 +90,7 @@ const createNoteWithTagsSchema = z.object({
 export const validateCreateNote = validate(createNoteWithTagsSchema);
 export const validateNoteId = validateParams(noteIdParamSchema);
 // BODY VALIDATORS
-export const validateCreateNote = validate(createNoteSchema);
+
 export const validateUpdateNote = validate(updateNoteSchema);
 export const validateBatchDelete = validate(batchDeleteSchema);
 export const validateBatchArchive = validate(batchArchiveSchema);
