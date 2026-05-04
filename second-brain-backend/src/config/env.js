@@ -13,6 +13,7 @@ const required = [
     'JWT_REFRESH_EXPIRES_IN',
     'RESEND_API_KEY',
     'RESEND_FROM_EMAIL',
+    'GEMINI_API_KEY',
 ];
 
 // FAIL FAST
@@ -21,6 +22,7 @@ required.forEach((key) => {
         throw new Error(`Missing environment variable: ${key}`);
     }
 });
+
 // CONFIG EXPORT
 export const config = {
     nodeEnv: process.env.NODE_ENV,
@@ -40,6 +42,13 @@ export const config = {
     email: {
         resendApiKey: process.env.RESEND_API_KEY,
         fromEmail: process.env.RESEND_FROM_EMAIL,
+    },
+
+    ai: {
+        geminiApiKey: process.env.GEMINI_API_KEY,
+        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp', // Default model
+        maxTokens: Number(process.env.GEMINI_MAX_TOKENS) || 8192,
+        temperature: Number(process.env.GEMINI_TEMPERATURE) || 0.7,
     },
 
     clientUrl: process.env.CLIENT_URL || null,
