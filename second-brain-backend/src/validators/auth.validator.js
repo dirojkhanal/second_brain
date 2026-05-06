@@ -16,6 +16,7 @@ const otpSchema = z
   .length(6, 'OTP must be 6 digits');
 
 // REQUEST SCHEMAS
+
 const registerSchema = z.object({
   name: z.string().min(2, 'Name is required'),
   email: emailSchema,

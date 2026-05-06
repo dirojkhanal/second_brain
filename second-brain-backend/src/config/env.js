@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// REQUIRED ENV VARIABLE
+// REQUIRED ENV VARIABLES
 const required = [
     'NODE_ENV',
     'PORT',
