@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/khana/OneDrive/Desktop/second_brain/second-brain-frontend/**)",
+      "Bash(npm install *)"
+    ]
+  }
+}
