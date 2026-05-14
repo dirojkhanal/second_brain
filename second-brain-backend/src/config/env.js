@@ -46,7 +46,7 @@ export const config = {
 
     ai: {
         geminiApiKey: process.env.GEMINI_API_KEY,
-        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp', // Default model
+        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
         maxTokens: Number(process.env.GEMINI_MAX_TOKENS) || 8192,
         temperature: Number(process.env.GEMINI_TEMPERATURE) || 0.7,
     },
