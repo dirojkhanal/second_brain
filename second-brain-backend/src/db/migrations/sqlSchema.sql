@@ -125,15 +125,47 @@ CREATE INDEX IF NOT EXISTS idx_note_links_source ON note_links(source_note_id);
 CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_note_id);
 
 -- =========================
--- AI OUTPUTS (OPTIONAL FEATURE)
+-- AI OUTPUTS
 -- =========================
 CREATE TABLE IF NOT EXISTS ai_outputs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
     input_text TEXT,
     output_text TEXT,
     type VARCHAR(50),
+    metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_ai_outputs_user_id ON ai_outputs(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_outputs_note_id ON ai_outputs(note_id);
+CREATE INDEX IF NOT EXISTS idx_ai_outputs_note_type ON ai_outputs(note_id, type);
+
+-- Safe column additions for existing databases (idempotent)
+ALTER TABLE ai_outputs ADD COLUMN IF NOT EXISTS note_id UUID REFERENCES notes(id) ON DELETE CASCADE;
+ALTER TABLE ai_outputs ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+
+-- =========================
+-- NOTE EMBEDDINGS (PHASE 2 — SEMANTIC SEARCH)
+-- Requires pgvector extension (enabled on Neon by default)
+-- =========================
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS note_embeddings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    embedding vector(768),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_note_embeddings_note_id ON note_embeddings(note_id);
+CREATE INDEX IF NOT EXISTS idx_note_embeddings_user_id ON note_embeddings(user_id);
+
+-- HNSW index enables fast approximate nearest-neighbor search at scale
+-- m=16 (connections per layer), ef_construction=64 (build-time quality)
+CREATE INDEX IF NOT EXISTS idx_note_embeddings_hnsw
+ON note_embeddings USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
